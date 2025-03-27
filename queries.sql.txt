@@ -1,0 +1,100 @@
+queries.sql
+-- -------------------------
+-- 📄 queries.sql
+-- -------------------------
+
+-- 1. Members who haven’t completed $100 membership
+SELECT cmn, membership_year, SUM(amount) AS total_paid
+FROM Payments
+GROUP BY cmn, membership_year
+HAVING SUM(amount) < 100;
+
+-- 2. Members with donations (paid > $100)
+SELECT cmn, membership_year, SUM(amount) - 100 AS donation
+FROM Payments
+GROUP BY cmn, membership_year
+HAVING SUM(amount) > 100;
+
+-- 3. Number of players per formation
+SELECT formation_id, COUNT(*) AS player_count
+FROM PlayerAssignment
+GROUP BY formation_id;
+
+-- 4. Average payment per year
+SELECT membership_year, AVG(amount) AS avg_payment
+FROM Payments
+GROUP BY membership_year;
+
+-- 5. Role popularity count
+SELECT role, COUNT(*) AS role_count
+FROM PlayerAssignment
+GROUP BY role
+ORDER BY role_count DESC;
+
+-- 6. Player with primary family info
+SELECT cm.cmn, cm.first_name AS player_name, fm.first_name AS parent_name, fm.email
+FROM ClubMember cm
+JOIN FamilyMember fm ON cm.family_id = fm.family_id;
+
+-- 7. Player session history
+SELECT cm.cmn, cm.first_name, tf.date, tf.session_type
+FROM ClubMember cm
+JOIN PlayerAssignment pa ON cm.cmn = pa.cmn
+JOIN TeamFormation tf ON pa.formation_id = tf.formation_id;
+
+-- 8. Payment and roles per player
+SELECT p.cmn, pa.role, p.amount, tf.date
+FROM Payments p
+JOIN PlayerAssignment pa ON p.cmn = pa.cmn
+JOIN TeamFormation tf ON pa.formation_id = tf.formation_id;
+
+-- 9. Club members and their locations
+SELECT cm.first_name, l.location_name
+FROM ClubMember cm
+JOIN FamilyMember fm ON cm.family_id = fm.family_id
+JOIN FamilyMemberLocation fml ON fm.family_id = fml.family_id
+JOIN Location l ON fml.location_id = l.location_id;
+
+-- 10. All team formations with addresses
+SELECT formation_id, date, team1_name, team2_name, address FROM TeamFormation;
+
+-- 11. All active members under 18
+SELECT first_name, birth_date
+FROM ClubMember
+WHERE is_active = TRUE AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 18;
+
+-- 12. Inactive members
+SELECT first_name, is_active FROM ClubMember WHERE is_active = FALSE;
+
+-- 13. Players with only one role
+SELECT cmn FROM PlayerAssignment
+GROUP BY cmn
+HAVING COUNT(DISTINCT role) = 1;
+
+-- 14. Players who only played Libero
+SELECT cmn FROM PlayerAssignment
+GROUP BY cmn
+HAVING COUNT(DISTINCT role) = 1 AND MIN(role) = 'Libero';
+
+-- 15. Sessions with more than 6 players
+SELECT formation_id FROM PlayerAssignment
+GROUP BY formation_id
+HAVING COUNT(*) > 6;
+
+-- 16. Members with no payments
+SELECT cmn, first_name FROM ClubMember
+WHERE cmn NOT IN (SELECT DISTINCT cmn FROM Payments);
+
+-- 17. Members who played in every session
+SELECT cmn FROM PlayerAssignment
+GROUP BY cmn
+HAVING COUNT(DISTINCT formation_id) = (SELECT COUNT(*) FROM TeamFormation);
+
+-- 18. Formations with no players
+SELECT formation_id FROM TeamFormation
+WHERE formation_id NOT IN (SELECT DISTINCT formation_id FROM PlayerAssignment);
+
+-- 19. Players who played in a game
+SELECT DISTINCT pa.cmn FROM PlayerAssignment pa
+JOIN TeamFormation tf ON pa.formation_id = tf.formation_id
+WHERE tf.session_type = 'Game';

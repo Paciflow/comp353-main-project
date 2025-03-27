@@ -1,0 +1,218 @@
+schema.sql
+-- -------------------------
+-- 📄 schema.sql
+-- -------------------------
+
+-- Locations Table
+CREATE TABLE Location (
+    location_id INT PRIMARY KEY AUTO_INCREMENT,
+    location_name VARCHAR(50) NOT NULL UNIQUE,
+    address VARCHAR(100),
+    city VARCHAR(30),
+    province VARCHAR(30),
+    postal_code VARCHAR(7),
+    web_address VARCHAR(255),
+    maximum_capacity_of_active_members INT CHECK (maximum_capacity_of_active_members > 0),
+    type_location ENUM('Head', 'Branch') NOT NULL
+);
+
+-- Family Member Table
+CREATE TABLE FamilyMember (
+    family_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    birth_date DATE,
+    SIN VARCHAR(15) NOT NULL UNIQUE,
+    medicare_card VARCHAR(15) NOT NULL UNIQUE,
+    phone_number VARCHAR(15),
+    email VARCHAR(100),
+    address VARCHAR(100),
+    city VARCHAR(30),
+    province VARCHAR(30),
+    postal_code VARCHAR(10)
+);
+
+-- Secondary Family Member Table
+CREATE TABLE SecondaryFamilyMember (
+    secondary_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    phone_number VARCHAR(15)
+);
+
+-- FamilyMemberLocation
+CREATE TABLE FamilyMemberLocation (
+    family_id INT,
+    location_id INT,
+    PRIMARY KEY (family_id, location_id),
+    FOREIGN KEY (family_id) REFERENCES FamilyMember(family_id) ON DELETE CASCADE,
+    FOREIGN KEY (location_id) REFERENCES Location(location_id) ON DELETE CASCADE
+);
+
+-- Club Members Table
+CREATE TABLE ClubMember (
+    cmn INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    birth_date DATE,
+    height_cm DECIMAL(5,2),
+    weight_kg DECIMAL(5,2),
+    SIN VARCHAR(15) NOT NULL UNIQUE,
+    medicare_card VARCHAR(15) NOT NULL UNIQUE,
+    phone_number VARCHAR(15),
+    email VARCHAR(100),
+    address VARCHAR(100),
+    city VARCHAR(30),
+    province VARCHAR(30),
+    postal_code VARCHAR(10),
+    family_id INT,
+    secondary_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (family_id) REFERENCES FamilyMember(family_id) ON DELETE CASCADE,
+    FOREIGN KEY (secondary_id) REFERENCES SecondaryFamilyMember(secondary_id) ON DELETE SET NULL
+);
+
+-- ClubMemberSecondaryLink (Optional for many secondary links)
+-- CREATE TABLE ClubMemberSecondaryLink (
+--     cmn INT,
+--     secondary_id INT,
+--     relationship ENUM('Father', 'Mother', 'Tutor', 'Other'),
+--     PRIMARY KEY (cmn, secondary_id),
+--     FOREIGN KEY (cmn) REFERENCES ClubMember(cmn),
+--     FOREIGN KEY (secondary_id) REFERENCES SecondaryFamilyMember(secondary_id)
+-- );
+
+-- Payments Table
+CREATE TABLE Payments (
+    payment_id INT PRIMARY KEY AUTO_INCREMENT,
+    cmn INT,
+    amount DECIMAL(6,2) CHECK (amount > 0),
+    payment_date DATE,
+    payment_method ENUM('Cash', 'Debit', 'Credit'),
+    membership_year YEAR,
+    FOREIGN KEY (cmn) REFERENCES ClubMember(cmn) ON DELETE CASCADE
+);
+
+-- Team Formation
+CREATE TABLE TeamFormation (
+    formation_id INT PRIMARY KEY AUTO_INCREMENT,
+    session_type ENUM('Training', 'Game') NOT NULL,
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    address VARCHAR(100),
+    team1_name VARCHAR(50),
+    team2_name VARCHAR(50),
+    team1_score INT,
+    team2_score INT
+);
+
+-- Player Assignment
+CREATE TABLE PlayerAssignment (
+    cmn INT,
+    formation_id INT,
+    team_number INT CHECK (team_number IN (1, 2)),
+    role ENUM('Outside Hitter', 'Opposite', 'Setter', 'Middle Blocker', 'Libero', 'Defensive Specialist', 'Serving Specialist'),
+    PRIMARY KEY (cmn, formation_id),
+    FOREIGN KEY (cmn) REFERENCES ClubMember(cmn) ON DELETE CASCADE,
+    FOREIGN KEY (formation_id) REFERENCES TeamFormation(formation_id) ON DELETE CASCADE
+);
+
+-- Email Log Table
+CREATE TABLE EmailLog (
+    email_id INT PRIMARY KEY AUTO_INCREMENT,
+    email_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    sender_email VARCHAR(100),
+    recipient_email VARCHAR(100),
+    cc_list TEXT,
+    subject VARCHAR(150),
+    body_preview VARCHAR(100)
+);
+
+-- PersonnelAssignment (for validate_general_manager trigger)
+CREATE TABLE PersonnelAssignment (
+    personnel_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50),
+    role VARCHAR(50),
+    location_id INT,
+    start_date DATE,
+    end_date DATE,
+    FOREIGN KEY (location_id) REFERENCES Location(location_id),
+    CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+-- -------------------------
+-- Triggers
+-- -------------------------
+
+DELIMITER //
+
+-- Trigger: Auto-deactivate members who are 19 or older
+CREATE TRIGGER auto_deactivate_club_member
+BEFORE INSERT ON ClubMember
+FOR EACH ROW
+BEGIN
+    DECLARE age INT;
+    SET age = TIMESTAMPDIFF(YEAR, NEW.birth_date, CURDATE());
+    IF age >= 19 THEN
+        SET NEW.is_active = FALSE;
+    END IF;
+END;//
+
+CREATE TRIGGER auto_deactivate_on_update
+BEFORE UPDATE ON ClubMember
+FOR EACH ROW
+BEGIN
+    DECLARE age INT;
+    SET age = TIMESTAMPDIFF(YEAR, NEW.birth_date, CURDATE());
+    IF age >= 19 THEN
+        SET NEW.is_active = FALSE;
+    END IF;
+END;//
+
+-- Trigger: Prevent time conflicts within 3 hours
+CREATE TRIGGER prevent_time_conflict
+BEFORE INSERT ON PlayerAssignment
+FOR EACH ROW
+BEGIN
+    DECLARE conflict_count INT;
+    SELECT COUNT(*) INTO conflict_count
+    FROM PlayerAssignment AS pa
+    JOIN TeamFormation AS tf1 ON pa.formation_id = tf1.formation_id
+    JOIN TeamFormation AS tf2 ON tf2.formation_id = NEW.formation_id
+    WHERE pa.cmn = NEW.cmn AND tf1.date = tf2.date
+        AND ABS(TIMESTAMPDIFF(MINUTE, tf1.start_time, tf2.start_time)) < 180;
+    IF conflict_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Conflict: Player already assigned to a session within 3 hours.';
+    END IF;
+END;//
+
+-- Trigger: Log email on new session
+CREATE TRIGGER log_email_on_teamformation
+AFTER INSERT ON TeamFormation
+FOR EACH ROW
+BEGIN
+    INSERT INTO EmailLog (sender_email, recipient_email, subject, body_preview)
+    VALUES (
+        'noreply@myvc.ca',
+        'coach@example.com',
+        CONCAT('New ', NEW.session_type, ' Session Scheduled'),
+        CONCAT('Session on ', NEW.date, ' at ', NEW.start_time, ' between ', NEW.team1_name, ' and ', NEW.team2_name)
+    );
+END;//
+
+-- Trigger: Validate General Manager assignment
+CREATE TRIGGER validate_general_manager
+BEFORE INSERT ON PersonnelAssignment
+FOR EACH ROW
+BEGIN
+    DECLARE loc_type ENUM('Head', 'Branch');
+    SELECT type_location INTO loc_type
+    FROM Location WHERE location_id = NEW.location_id;
+    IF NEW.role = 'General Manager' AND loc_type != 'Head' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'General Manager can only be assigned to Head locations';
+    END IF;
+END;//
+
+DELIMITER ;
