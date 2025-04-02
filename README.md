@@ -1,47 +1,75 @@
-# comp353-main-project
-Database system for the Montréal Youth Volleyball Club – COMP 353
-# COMP 353 – Montréal Youth Volleyball Club Database System
+# 📘 COMP 353 – Montréal Youth Volleyball Club Database Project
 
-## Project Overview
-This database system models the Montréal Youth Volleyball Club, handling:
-- Member registration (ages 11–18)
-- Payments and donations
-- Family relationships
-- Game and training sessions
-- Personnel roles and mandates
-- Email logging and data integrity rules
+## 📚 Project Overview
+This project is a fully normalized MySQL database system for the Montréal Youth Volleyball Club. It manages:
+- Member and family registrations
+- Payments and membership validation
+- Team formations and player roles
+- Personnel assignments
+- Email notifications via triggers
 
-## File Structure
-| File | Description |
-|------|-------------|
-| `schema.sql` | Full schema: tables, constraints, triggers, and sample data |
-| `queries.sql` | 20+ required queries using joins, grouping, conditions, etc. |
-| `README.md` | Project description, schema summary, and usage instructions |
-| `sample_output/` | (Optional) Query screenshots or .txt files |
+The system enforces data integrity through foreign keys, CHECK constraints, and TRIGGERS.
 
 ---
 
-## Technologies Used
-- MySQL 8.x
-- MySQL Workbench
-- SQL (DDL, DML, Triggers, Views)
-- GitHub (version control)
-- (Optional) GUI by teammate using _______________
+## 📂 Repository Structure
+| File           | Description                                              |
+|----------------|----------------------------------------------------------|
+| `schema.sql`   | Full schema including tables, constraints, and triggers |
+| `queries.sql`  | 20+ required SQL queries for analysis and reporting     |
+| `README.md`    | Project overview, features, and usage instructions      |
 
 ---
 
-## Key Features
-- **3NF/BCNF Schema** with strong normalization
+## 🧱 Technologies Used
+- **MySQL 8.x** (Workbench / CLI)
+- SQL (DDL + DML)
+- Git + GitHub for version control
+- GUI (developed by teammate)
+
+---
+
+## ✅ Key Features
+- **3NF/BCNF schema** with properly normalized tables
+- **CHECK constraints** to enforce valid data
 - **Triggers** for:
-  - Player deactivation at age 19
-  - Session time conflict prevention
-  - Email logging
-- **CHECK constraints** for rule enforcement
-- **EmailLog table** simulating automated notifications
-- **20+ SQL queries** showing full system interaction
+  - Auto-deactivating members at age 19
+  - Preventing overlapping session assignments
+  - Email logging on new team formations
+  - Validating personnel assignments (e.g., GMs only at Head locations)
+- **EmailLog** table to simulate system alerts
+- 20+ analytical queries across all main tables
 
 ---
 
-## How to Run the Project
+## 🚀 Getting Started
 
-1. Clone the repo  
+### 📥 Clone the Repo
+```bash
+git clone https://github.com/YOUR_USERNAME/comp353-main-project.git
+cd comp353-main-project
+```
+
+### 🧑‍💻 Load the Schema & Sample Data
+1. Open `schema.sql` in MySQL Workbench
+2. Run the script to create tables, triggers, and constraints
+
+### 🔎 Run Queries
+1. Open `queries.sql`
+2. Execute queries for reporting and demo purposes
+
+---
+
+## 📊 Query Highlights
+- Members with incomplete payments
+- Players who only played Libero
+- Sessions with more than 6 players
+- Members who never paid
+- Players who participated in all games
+- Session-player-role analytics
+
+---
+
+## 👨‍👩‍👦 Contributors
+- **Pacifique Uwamukiza** – Schema, logic, constraints, SQL queries
+- **Seuni** – GUI interface (front-end integration)
