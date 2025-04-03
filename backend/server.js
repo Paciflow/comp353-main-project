@@ -30,6 +30,16 @@ app.post('/connect', (req, res) => {
     return res.json(200);
 });
 
+app.post('/query', (req, res) => {
+    const SQL = req.body.query;
+    console.log(SQL)
+    return res.json(SQL);
+    db.query(SQL, (err, data) => {
+        if (err) return res.json(err);
+        return res.json(data);
+    });
+});
+
 app.get('/users', (req, res) => {
     const SQL = "SELECT * FROM users";
     db.query(SQL, (err, data) => {

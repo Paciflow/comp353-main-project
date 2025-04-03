@@ -1,5 +1,33 @@
 #root {
   width: 80%;
   margin: 0 auto;
+  /* text-align: center; */
+}
+
+h1 {
   text-align: center;
+}
+
+.inputs {
+  width: 30%;
+  margin: 0 auto;
+}
+
+.login {
+  text-align: center;
+  margin-top: 1em;
+}
+
+.query {
+  width: 50%;
+  margin: 0 auto;
+}
+
+.tables {
+  max-width: 100% !important;
+  margin: 2em auto;
+}
+
+.tableDivider {
+  padding: 0 10% 0 10%;
 }
