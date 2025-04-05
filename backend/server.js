@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
 var bodyParser = require('body-parser');
+const port = 3000;
 
 const app = express();
 app.use(cors());
@@ -48,6 +49,6 @@ app.get('/users', (req, res) => {
     });
 });
 
-app.listen(8080, () => {
-    console.log("listening on port 8080")
+app.listen(port, () => {
+    console.log("listening on port " + port)
 })
