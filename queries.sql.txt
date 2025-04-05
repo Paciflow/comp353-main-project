@@ -3,98 +3,335 @@ queries.sql
 -- 📄 queries.sql
 -- -------------------------
 
--- 1. Members who haven’t completed $100 membership
-SELECT cmn, membership_year, SUM(amount) AS total_paid
-FROM Payments
-GROUP BY cmn, membership_year
-HAVING SUM(amount) < 100;
 
--- 2. Members with donations (paid > $100)
-SELECT cmn, membership_year, SUM(amount) - 100 AS donation
-FROM Payments
-GROUP BY cmn, membership_year
-HAVING SUM(amount) > 100;
+-- 1. LOCATION (Create, Update, Delete)
+INSERT INTO Location (location_name, address, city, province, postal_code, web_address, maximum_capacity_of_active_members, type_location)
+VALUES ('Downtown Spot', '999 Ste Catherine St', 'Montreal', 'QC', 'H3B1X8', 'https://myvc-downtown.ca', 120, 'Branch');
+UPDATE Location SET maximum_capacity_of_active_members = 150 WHERE location_name = 'Downtown Spot';
+DELETE FROM Location WHERE location_name = 'Downtown Spot';
 
--- 3. Number of players per formation
-SELECT formation_id, COUNT(*) AS player_count
-FROM PlayerAssignment
-GROUP BY formation_id;
+-- 2. PERSONNEL (Create, Update, Delete)
+INSERT INTO Personnel (first_name, last_name, birth_date, SIN, medicare_card, phone_number, email, address, city, province, postal_code)
+VALUES ('Sarah', 'Lee', '1988-12-12', 'PERSIN9', 'PERMC9', '5145559999', 'sarah.lee@myvc.ca', '400 Admin St', 'Laval', 'QC', 'H7W2E3');
+UPDATE Personnel SET phone_number = '5146661234' WHERE email = 'sarah.lee@myvc.ca';
+DELETE FROM Personnel WHERE email = 'sarah.lee@myvc.ca';
 
--- 4. Average payment per year
-SELECT membership_year, AVG(amount) AS avg_payment
-FROM Payments
-GROUP BY membership_year;
+-- 3. FAMILY MEMBER (Primary and Secondary)
+INSERT INTO FamilyMember (first_name, last_name, birth_date, SIN, medicare_card, phone_number, email, address, city, province, postal_code)
+VALUES ('Tom', 'Hardy', '1970-01-01', 'FAM-X', 'MED-X', '5148881111', 'tom.hardy@myvc.ca', '111 Hardy St', 'Montreal', 'QC', 'H3A1X1');
+INSERT INTO SecondaryFamilyMember (first_name, last_name, phone_number)
+VALUES ('Anna', 'Hardy', '5148882222');
+UPDATE FamilyMember SET city = 'Laval' WHERE SIN = 'FAM-X';
+DELETE FROM SecondaryFamilyMember WHERE first_name = 'Anna' AND last_name = 'Hardy';
 
--- 5. Role popularity count
-SELECT role, COUNT(*) AS role_count
-FROM PlayerAssignment
-GROUP BY role
-ORDER BY role_count DESC;
+-- 4. CLUB MEMBER (Create, Update, Delete)
+INSERT INTO ClubMember (first_name, last_name, birth_date, height_cm, weight_kg, SIN, medicare_card, phone_number, email, address, city, province, postal_code, family_id, secondary_id)
+VALUES ('Ben', 'Turner', '2012-02-02', 145, 48, 'SIN9', 'MC9', '5141239999', 'ben.turner@myvc.ca', '222 Junior Rd', 'Dorval', 'QC', 'H9P2B4', 42, 1);
+UPDATE ClubMember SET weight_kg = 50 WHERE SIN = 'SIN9';
+DELETE FROM ClubMember WHERE SIN = 'SIN9';
 
--- 6. Player with primary family info
-SELECT cm.cmn, cm.first_name AS player_name, fm.first_name AS parent_name, fm.email
-FROM ClubMember cm
-JOIN FamilyMember fm ON cm.family_id = fm.family_id;
+-- 5. TEAM FORMATION (Create, Update, Delete)
 
--- 7. Player session history
-SELECT cm.cmn, cm.first_name, tf.date, tf.session_type
-FROM ClubMember cm
-JOIN PlayerAssignment pa ON cm.cmn = pa.cmn
-JOIN TeamFormation tf ON pa.formation_id = tf.formation_id;
+-- Delete the duplicate
+DELETE FROM FamilyMember WHERE SIN = 'FAM-X';
 
--- 8. Payment and roles per player
-SELECT p.cmn, pa.role, p.amount, tf.date
-FROM Payments p
-JOIN PlayerAssignment pa ON p.cmn = pa.cmn
-JOIN TeamFormation tf ON pa.formation_id = tf.formation_id;
+-- Re-insert cleanly
 
--- 9. Club members and their locations
-SELECT cm.first_name, l.location_name
-FROM ClubMember cm
-JOIN FamilyMember fm ON cm.family_id = fm.family_id
-JOIN FamilyMemberLocation fml ON fm.family_id = fml.family_id
-JOIN Location l ON fml.location_id = l.location_id;
+INSERT INTO FamilyMember (first_name, last_name, birth_date, SIN, medicare_card, phone_number, email, address, city, province, postal_code)
+VALUES ('Tom', 'Hardy', '1970-01-01', 'FAM-X', 'MED-X', '5148881111', 'tom.hardy@myvc.ca', '111 Hardy St', 'Montreal', 'QC', 'H3A1X1');
 
--- 10. All team formations with addresses
-SELECT formation_id, date, team1_name, team2_name, address FROM TeamFormation;
+INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
+VALUES ('Training', '2025-04-20', '18:30:00', 'Downtown Gym', 'Green Eagles', 'Black Panthers');
+UPDATE TeamFormation SET start_time = '19:00:00' WHERE team1_name = 'Green Eagles';
+DELETE FROM TeamFormation WHERE team1_name = 'Green Eagles' AND team2_name = 'Black Panthers';
 
--- 11. All active members under 18
-SELECT first_name, birth_date
-FROM ClubMember
-WHERE is_active = TRUE AND TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < 18;
+-- Query 6: Assign, Edit, and Delete a Club Member from a Team Formation
+INSERT INTO PlayerAssignment (cmn, formation_id, team_number, role)
+VALUES (19, 1, 1, 'Setter');
 
--- 12. Inactive members
-SELECT first_name, is_active FROM ClubMember WHERE is_active = FALSE;
+-- NOTE for TA:
+-- The following INSERT is expected to fail because of the "prevent_time_conflict" trigger.
+-- It ensures that no player can be assigned to two sessions within 3 hours on the same day.
+-- This error confirms that the constraint is working correctly.
 
--- 13. Players with only one role
-SELECT cmn FROM PlayerAssignment
-GROUP BY cmn
-HAVING COUNT(DISTINCT role) = 1;
+UPDATE PlayerAssignment SET team_number = 2 WHERE cmn = 19 AND formation_id = 1;
+DELETE FROM PlayerAssignment WHERE cmn = 19 AND formation_id = 1;
 
--- 14. Players who only played Libero
-SELECT cmn FROM PlayerAssignment
-GROUP BY cmn
-HAVING COUNT(DISTINCT role) = 1 AND MIN(role) = 'Libero';
+-- Query 7: Location Report with General Manager and Club Member Count
+SELECT 
+  L.location_name, L.address, L.city, L.province, L.postal_code, 
+  GROUP_CONCAT(LP.phone_number SEPARATOR ', ') AS phone_numbers,
+  L.web_address, L.type_location, L.maximum_capacity_of_active_members,
+  MAX(CONCAT(P.first_name, ' ', P.last_name)) AS general_manager,
+  COUNT(DISTINCT CM.cmn) AS total_club_members
+FROM Location L
+LEFT JOIN LocationPhone LP ON L.location_id = LP.location_id
+LEFT JOIN PersonnelAssignment PA ON L.location_id = PA.location_id AND PA.role = 'General Manager'
+LEFT JOIN Personnel P ON PA.personnel_id = P.personnel_id
+LEFT JOIN FamilyMemberLocation FML ON L.location_id = FML.location_id
+LEFT JOIN ClubMember CM ON FML.family_id = CM.family_id
+GROUP BY L.location_id
+ORDER BY L.province ASC, L.city ASC;
 
--- 15. Sessions with more than 6 players
-SELECT formation_id FROM PlayerAssignment
-GROUP BY formation_id
-HAVING COUNT(*) > 6;
+-- Query 8: Family Details with Associated Locations and Club Members
+SELECT F.first_name AS fam_first, F.last_name AS fam_last, S.first_name AS sec_first, S.last_name AS sec_last, S.phone_number,
+       L.location_name, C.cmn, C.first_name, C.last_name, C.birth_date, C.SIN, C.medicare_card, 
+       C.phone_number AS cm_phone, C.address, C.city, C.province, C.postal_code
+FROM FamilyMember F
+JOIN SecondaryFamilyMember S ON F.family_id IN (SELECT family_id FROM ClubMember WHERE secondary_id = S.secondary_id)
+JOIN ClubMember C ON F.family_id = C.family_id
+JOIN FamilyMemberLocation FML ON F.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+ORDER BY F.family_id;
 
--- 16. Members with no payments
-SELECT cmn, first_name FROM ClubMember
-WHERE cmn NOT IN (SELECT DISTINCT cmn FROM Payments);
+-- Query 9: Sessions for Given Location and Week
 
--- 17. Members who played in every session
-SELECT cmn FROM PlayerAssignment
-GROUP BY cmn
-HAVING COUNT(DISTINCT formation_id) = (SELECT COUNT(*) FROM TeamFormation);
+SELECT 
+  TF.date, TF.start_time, TF.session_type, TF.address, TF.team1_name, TF.team2_name, 
+  TF.team1_score, TF.team2_score,
+  P.first_name AS coach_first, P.last_name AS coach_last,
+  C.first_name, C.last_name, PA.role
+FROM TeamFormation TF
+JOIN PlayerAssignment PA ON TF.formation_id = PA.formation_id
+JOIN ClubMember C ON PA.cmn = C.cmn
+JOIN Location L ON TF.address LIKE CONCAT('%', L.city, '%')  -- Join Location first
+LEFT JOIN PersonnelAssignment PE ON L.address = TF.address AND PE.role = 'Coach' -- Now use L
+LEFT JOIN Personnel P ON PE.personnel_id = P.personnel_id
+WHERE TF.date BETWEEN '2025-04-01' AND '2025-04-07'
+ORDER BY TF.date, TF.start_time;
 
--- 18. Formations with no players
-SELECT formation_id FROM TeamFormation
-WHERE formation_id NOT IN (SELECT DISTINCT formation_id FROM PlayerAssignment);
 
--- 19. Players who played in a game
-SELECT DISTINCT pa.cmn FROM PlayerAssignment pa
-JOIN TeamFormation tf ON pa.formation_id = tf.formation_id
-WHERE tf.session_type = 'Game';
+-- Query 10: Club Members in 3 Locations, Active, ≤ 3 Years
+SELECT C.cmn, C.first_name, C.last_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+WHERE C.is_active = TRUE
+GROUP BY C.cmn
+HAVING COUNT(DISTINCT FML.location_id) >= 3
+ORDER BY C.cmn;
+
+-- Query 11: Team Formations per Location
+SELECT L.location_name,
+       SUM(CASE WHEN TF.session_type = 'Training' THEN 1 ELSE 0 END) AS total_training_sessions,
+       SUM(CASE WHEN TF.session_type = 'Training' THEN PAcount.total ELSE 0 END) AS total_training_players,
+       SUM(CASE WHEN TF.session_type = 'Game' THEN 1 ELSE 0 END) AS total_game_sessions,
+       SUM(CASE WHEN TF.session_type = 'Game' THEN PAcount.total ELSE 0 END) AS total_game_players
+FROM Location L
+JOIN TeamFormation TF ON TF.address LIKE CONCAT('%', L.city, '%')
+LEFT JOIN (
+    SELECT formation_id, COUNT(*) AS total
+    FROM PlayerAssignment
+    GROUP BY formation_id
+) AS PAcount ON TF.formation_id = PAcount.formation_id
+WHERE TF.date BETWEEN '2025-01-01' AND '2025-03-31'
+GROUP BY L.location_id
+HAVING total_game_sessions >= 2
+ORDER BY total_game_sessions DESC;
+
+-- Query 12: Active Club Members Never Assigned
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE AND C.cmn NOT IN (
+    SELECT DISTINCT cmn FROM PlayerAssignment
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 13: Assigned Only as Outside Hitter
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE
+AND C.cmn IN (
+    SELECT cmn FROM PlayerAssignment
+    GROUP BY cmn
+    HAVING COUNT(DISTINCT role) = 1 AND MAX(role) = 'Outside Hitter'
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 14: Assigned At Least Once to All Roles
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE
+AND C.cmn IN (
+    SELECT cmn FROM PlayerAssignment
+    JOIN TeamFormation TF ON PlayerAssignment.formation_id = TF.formation_id AND TF.session_type = 'Game'
+    GROUP BY cmn
+    HAVING COUNT(DISTINCT role) = 7
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 15: Family Members Who Are Captains and Have Active Club Members
+SELECT DISTINCT FM.first_name, FM.last_name, FM.phone_number
+FROM FamilyMember FM
+JOIN ClubMember CM ON FM.family_id = CM.family_id AND CM.is_active = TRUE
+JOIN FamilyMemberLocation FML ON FM.family_id = FML.family_id
+JOIN PersonnelAssignment PA ON PA.location_id = FML.location_id AND PA.role = 'Captain';
+
+
+-- Query 8: Family Details with Associated Locations and Club Members
+SELECT F.first_name AS fam_first, F.last_name AS fam_last, S.first_name AS sec_first, S.last_name AS sec_last, S.phone_number,
+       L.location_name, C.cmn, C.first_name, C.last_name, C.birth_date, C.SIN, C.medicare_card, 
+       C.phone_number AS cm_phone, C.address, C.city, C.province, C.postal_code
+FROM FamilyMember F
+JOIN SecondaryFamilyMember S ON F.family_id IN (SELECT family_id FROM ClubMember WHERE secondary_id = S.secondary_id)
+JOIN ClubMember C ON F.family_id = C.family_id
+JOIN FamilyMemberLocation FML ON F.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+ORDER BY F.family_id;
+
+-- Query 9: Sessions for Given Location and Week
+
+SELECT 
+  TF.date, TF.start_time, TF.session_type, TF.address, TF.team1_name, TF.team2_name, 
+  TF.team1_score, TF.team2_score,
+  P.first_name AS coach_first, P.last_name AS coach_last,
+  C.first_name, C.last_name, PA.role
+FROM TeamFormation TF
+JOIN PlayerAssignment PA ON TF.formation_id = PA.formation_id
+JOIN ClubMember C ON PA.cmn = C.cmn
+JOIN Location L ON TF.address LIKE CONCAT('%', L.city, '%') -- ✅ JOIN Location before using it
+LEFT JOIN PersonnelAssignment PE ON L.address = TF.address AND PE.role = 'Coach' -- ✅ Now safe to use L
+LEFT JOIN Personnel P ON PE.personnel_id = P.personnel_id
+WHERE TF.date BETWEEN '2025-04-01' AND '2025-04-07'
+ORDER BY TF.date, TF.start_time;
+
+-- Query 10: Club Members in 3 Locations, Active, ≤ 3 Years
+SELECT C.cmn, C.first_name, C.last_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+WHERE C.is_active = TRUE
+GROUP BY C.cmn
+HAVING COUNT(DISTINCT FML.location_id) >= 3
+ORDER BY C.cmn;
+
+-- Query 11: Team Formations per Location
+SELECT L.location_name,
+       SUM(CASE WHEN TF.session_type = 'Training' THEN 1 ELSE 0 END) AS total_training_sessions,
+       SUM(CASE WHEN TF.session_type = 'Training' THEN PAcount.total ELSE 0 END) AS total_training_players,
+       SUM(CASE WHEN TF.session_type = 'Game' THEN 1 ELSE 0 END) AS total_game_sessions,
+       SUM(CASE WHEN TF.session_type = 'Game' THEN PAcount.total ELSE 0 END) AS total_game_players
+FROM Location L
+JOIN TeamFormation TF ON TF.address LIKE CONCAT('%', L.city, '%')
+LEFT JOIN (
+    SELECT formation_id, COUNT(*) AS total
+    FROM PlayerAssignment
+    GROUP BY formation_id
+) AS PAcount ON TF.formation_id = PAcount.formation_id
+WHERE TF.date BETWEEN '2025-01-01' AND '2025-03-31'
+GROUP BY L.location_id
+HAVING total_game_sessions >= 2
+ORDER BY total_game_sessions DESC;
+
+-- Query 12: Active Club Members Never Assigned
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE AND C.cmn NOT IN (
+    SELECT DISTINCT cmn FROM PlayerAssignment
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 13: Assigned Only as Outside Hitter
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE
+AND C.cmn IN (
+    SELECT cmn FROM PlayerAssignment
+    GROUP BY cmn
+    HAVING COUNT(DISTINCT role) = 1 AND MAX(role) = 'Outside Hitter'
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 14: Assigned At Least Once to All Roles
+SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
+       C.phone_number, C.email, L.location_name
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE
+AND C.cmn IN (
+    SELECT cmn FROM PlayerAssignment
+    JOIN TeamFormation TF ON PlayerAssignment.formation_id = TF.formation_id AND TF.session_type = 'Game'
+    GROUP BY cmn
+    HAVING COUNT(DISTINCT role) = 7
+)
+ORDER BY L.location_name, C.cmn;
+
+-- Query 15: Family Members Who Are Captains and Have Active Club Members
+SELECT DISTINCT FM.first_name, FM.last_name, FM.phone_number
+FROM FamilyMember FM
+JOIN ClubMember CM ON FM.family_id = CM.family_id AND CM.is_active = TRUE
+JOIN FamilyMemberLocation FML ON FM.family_id = FML.family_id
+JOIN PersonnelAssignment PA ON PA.location_id = FML.location_id AND PA.role = 'Captain';
+
+-- Query 16: Active Club Members Who Have Never Lost a Game
+SELECT 
+   C.cmn, 
+   MAX(C.first_name) AS first_name,
+   MAX(C.last_name) AS last_name,
+   TIMESTAMPDIFF(YEAR, MAX(C.birth_date), CURDATE()) AS age,
+   MAX(C.phone_number) AS phone_number,
+   MAX(C.email) AS email,
+   MAX(L.location_name) AS location_name
+FROM ClubMember C
+JOIN PlayerAssignment PA ON C.cmn = PA.cmn
+JOIN TeamFormation TF ON PA.formation_id = TF.formation_id AND TF.session_type = 'Game'
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+WHERE C.is_active = TRUE
+GROUP BY C.cmn
+HAVING SUM(
+  (PA.team_number = 1 AND TF.team1_score < TF.team2_score) OR
+  (PA.team_number = 2 AND TF.team2_score < TF.team1_score)
+) = 0
+ORDER BY location_name, cmn;
+
+-- Query 17: All Personnel Who Are or Were Treasurers
+SELECT P.first_name, P.last_name, PA.start_date, PA.end_date
+FROM PersonnelAssignment PA
+JOIN Personnel P ON PA.personnel_id = P.personnel_id
+WHERE PA.role = 'Treasurer'
+ORDER BY P.first_name, P.last_name, PA.start_date;
+
+-- Query 18: Deactivated Club Members Due to Age > 18
+SELECT 
+   C.first_name, C.last_name, C.phone_number, C.email,
+   DATE_ADD(C.birth_date, INTERVAL 18 YEAR) AS deactivation_date,
+   L.location_name, PA.role
+FROM ClubMember C
+JOIN FamilyMemberLocation FML ON C.family_id = FML.family_id
+JOIN Location L ON FML.location_id = L.location_id
+LEFT JOIN PlayerAssignment PA ON C.cmn = PA.cmn
+WHERE C.is_active = FALSE 
+  AND TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) > 18
+ORDER BY L.location_name, PA.role, C.first_name, C.last_name;
+
+
+-- Query 19: Triggers Implemented (Explanation)
+-- Trigger: auto_deactivate_club_member - Automatically deactivates club members who are over 18.
+-- Trigger: prevent_time_conflict - Prevents players from joining two formations within 3 hours.
+-- Trigger: log_email_on_teamformation - Logs an email automatically when a new formation is added.
+
+-- Query 20: Integrity Constraint Example (Trigger Test)
+-- The following should FAIL if trigger works:
+INSERT INTO PlayerAssignment (cmn, formation_id, team_number, role)
+VALUES (19, 2, 1, 'Setter');
+
+-- Query 21: Email Logs from System
+SELECT * FROM EmailLog
+ORDER BY email_date DESC
+LIMIT 10;
+
