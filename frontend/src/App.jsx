@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
 import '@mantine/core/styles.css';
 import { MantineProvider, Tabs, PasswordInput, TextInput, Textarea } from '@mantine/core';
@@ -7,7 +7,7 @@ import { useDisclosure } from '@mantine/hooks';
 
 function App() {
   // useEffect(() => {
-  //   fetch('http://127.0.0.1:8080/')
+  //   fetch('http://127.0.0.1:3000/')
   //     .then(res => res.json())
   //     .then(data => console.log(data))
   //     .catch(err => console.log(err));
@@ -27,6 +27,7 @@ function App() {
 function Login(props) {
   const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
+  const [errorText, setErrorText] = useState('');
 
   return (<>
     <div className="card">
@@ -47,7 +48,7 @@ function Login(props) {
         />
         <Center>
           <button className='login' onClick={() => {
-            fetch("http://127.0.0.1:8080/connect", {
+            fetch("http://127.0.0.1:3000/connect", {
               method: "POST",
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -56,8 +57,8 @@ function Login(props) {
               }),
             })
               .then(res => {
-                if (res.ok) props.setLoggedIn(true)
-                else props.setLoggedIn(false)
+                if (res.ok) { props.setLoggedIn(true); setErrorText("") }
+                else { props.setLoggedIn(false); setErrorText("Something went wrong. Try again.") }
               })
               .catch(err => {
                 console.log(err)
@@ -67,6 +68,7 @@ function Login(props) {
             Log In
           </button>
         </Center>
+        {errorText == "" ? <></> : <p>{errorText}</p>}
       </div>
     </div>
   </>);
@@ -75,7 +77,7 @@ function Login(props) {
 function Main() {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(0);
-  const tablenames = ['Location', 'FamilyMember', 'SecondaryFamilyMember', 'FamilyMemberLocation', 'ClubMember',
+  const tablenames = ['location', 'family_member', 'SecondaryFamilyMember', 'FamilyMemberLocation', 'ClubMember',
     'ClubMemberSecondaryLink', 'Payments', 'TeamFormation', 'PlayerAssignment', 'EmailLog', 'PersonnelAssignment'];
   let tables = [];
   tablenames.forEach(t => {
@@ -109,7 +111,7 @@ function Main() {
           />
           <Center>
             <button className='login' onClick={() => {
-              fetch("http://127.0.0.1:8080/query", {
+              fetch("http://127.0.0.1:3000/query", {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -132,7 +134,7 @@ function Main() {
           <Divider my="md" size="md" label={"Result:"} labelPosition="center" />
         </div>
         <Center>
-          {result == 0 ? <p>Nothing to show.</p> : <> {result != "" ? <p>{result}</p> : <p>ERROR</p>} </>}
+          {result == 0 ? <p>Nothing to show.</p> : <> <DataTable data={result} /> </>}
         </Center>
       </Tabs.Panel>
     </Tabs>
@@ -142,7 +144,7 @@ function Main() {
 function Table(props) {
   const name = props.name;
   const [opened, { toggle }] = useDisclosure(false);
-  const [content, setContent] = useState("");
+  const [result, setResult] = useState("");
 
   return (
     <Box maw={400} mx="auto" className='tables'>
@@ -150,7 +152,7 @@ function Table(props) {
         <button onClick={() => {
           toggle();
           if (!opened) {
-            let temp = fetch("http://127.0.0.1:8080/query", {
+            fetch("http://127.0.0.1:3000/query", {
               method: "POST",
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -159,14 +161,13 @@ function Table(props) {
             })
               .then(res => {
                 if (res.ok) return res.json();
-                else { return "An error occured."; }
+                else { setResult(''); return; }
               })
-              .then(data => { console.log(typeof data); return data })
+              .then(data => setResult(data))
               .catch(err => {
-                console.log(err);
-                setContent("An error occured.");
+                console.log(err)
+                setResult('')
               });
-            setContent(temp);
           };
         }}>
           {name}
@@ -174,20 +175,49 @@ function Table(props) {
       } labelPosition="center" className='tableDivider' />
       <Collapse in={opened}>
         <Center>
-          {/* <Text>{typeof content == "string" ? { content } : (toTable(content))}</Text>  */}
+          <DataTable data={result} />
         </Center>
       </Collapse>
     </Box>
   );
 }
 
-function toTable(data) {
-  return
-  <table>
-    <tr>
-      <th></th>
-    </tr>
-  </table>
-}
+const DataTable = ({ data }) => {
+  console.log(data)
+  if (!data || data.length === 0) {
+    return <p>No data available.</p>;
+  } else if ('errno' in data) {
+    return <p>There was an error.</p>;
+  }
+
+  const headers = Object.keys(data[0]);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full border-collapse border border-gray-300">
+        <thead>
+          <tr className="bg-gray-200">
+            {headers.map((header) => (
+              <th key={header} className="border border-gray-300 px-4 py-2">
+                {header.replace(/_/g, " ").toUpperCase()}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, rowIndex) => (
+            <tr key={rowIndex} className="hover:bg-gray-100">
+              {headers.map((header) => (
+                <td key={header} className="border border-gray-300 px-4 py-2">
+                  {row[header]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 export default App

@@ -16,25 +16,23 @@ app.get('/', (req, res) => {
 });
 
 app.post('/connect', (req, res) => {
-    console.log(req.body);
-    // db = mysql.createConnection({
-    //     host: "vqc353.encs.concordia.ca",
-    //     user: req.body.user,
-    //     password: req.body.pasword,
-    //     database: "vqc353_4"
-    // });
-    return res.json(200);
-    db.connect((err) => {
-        if (err) throw err;
-        console.log("Connected!");
+    db = mysql.createConnection({
+        host: "vqc353.encs.concordia.ca",
+        port: "3306",
+        user: req.body.user,
+        password: req.body.password,
+        database: "vqc353_4"
     });
-    return res.json(200);
+    db.connect((err) => {
+        if (err) {console.error(err); return res.status(500).json(err)}
+        console.log("Connected!");
+        return res.json(200);
+    });
 });
 
 app.post('/query', (req, res) => {
     const SQL = req.body.query;
     console.log(SQL)
-    return res.json(SQL);
     db.query(SQL, (err, data) => {
         if (err) return res.json(err);
         return res.json(data);
