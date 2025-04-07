@@ -112,6 +112,10 @@ ORDER BY C.cmn;
 
 -- Query 11: Team Formations per Location
 
+-- Assign players to the new formations
+INSERT INTO PlayerAssignment (cmn, formation_id, team_number, role)
+VALUES (19, 2, 1, 'Libero'), (20, 3, 2, 'Setter'); -- Example values
+
 -- Add first game session
 INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
 VALUES ('Game', '2025-02-15', '17:00:00', '123 Downtown Gym, Montreal', 'Red Hawks', 'Blue Sharks');
