@@ -120,6 +120,10 @@ VALUES ('Game', '2025-02-15', '17:00:00', '123 Downtown Gym, Montreal', 'Red Haw
 INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
 VALUES ('Game', '2025-03-10', '18:00:00', '456 Laval Arena, Laval', 'Silver Snakes', 'Golden Lions');
 
+-- Example of adding a training session
+INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
+VALUES ('Training', '2025-03-01', '17:00:00', 'Montreal Central Gym', 'Red Hawks', 'Blue Wolves');
+
 SELECT L.location_name,
        SUM(CASE WHEN TF.session_type = 'Training' THEN 1 ELSE 0 END) AS total_training_sessions,
        SUM(CASE WHEN TF.session_type = 'Training' THEN PAcount.total ELSE 0 END) AS total_training_players,
@@ -132,10 +136,11 @@ LEFT JOIN (
     FROM PlayerAssignment
     GROUP BY formation_id
 ) AS PAcount ON TF.formation_id = PAcount.formation_id
-WHERE TF.date BETWEEN '2025-01-01' AND '2025-03-31'
+WHERE TF.date BETWEEN '2025-01-01' AND '2025-04-30'
 GROUP BY L.location_id
 HAVING total_game_sessions >= 2
 ORDER BY total_game_sessions DESC;
+
 
 -- Query 12: Active Club Members Never Assigned
 SELECT C.cmn, C.first_name, C.last_name, TIMESTAMPDIFF(YEAR, C.birth_date, CURDATE()) AS age,
