@@ -111,6 +111,15 @@ HAVING COUNT(DISTINCT FML.location_id) >= 3
 ORDER BY C.cmn;
 
 -- Query 11: Team Formations per Location
+
+-- Add first game session
+INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
+VALUES ('Game', '2025-02-15', '17:00:00', '123 Downtown Gym, Montreal', 'Red Hawks', 'Blue Sharks');
+
+-- Add second game session
+INSERT INTO TeamFormation (session_type, date, start_time, address, team1_name, team2_name)
+VALUES ('Game', '2025-03-10', '18:00:00', '456 Laval Arena, Laval', 'Silver Snakes', 'Golden Lions');
+
 SELECT L.location_name,
        SUM(CASE WHEN TF.session_type = 'Training' THEN 1 ELSE 0 END) AS total_training_sessions,
        SUM(CASE WHEN TF.session_type = 'Training' THEN PAcount.total ELSE 0 END) AS total_training_players,
