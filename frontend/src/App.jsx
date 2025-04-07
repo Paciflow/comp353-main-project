@@ -77,8 +77,8 @@ function Login(props) {
 function Main() {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(0);
-  const tablenames = ['location', 'family_member', 'SecondaryFamilyMember', 'FamilyMemberLocation', 'ClubMember',
-    'ClubMemberSecondaryLink', 'Payments', 'TeamFormation', 'PlayerAssignment', 'EmailLog', 'PersonnelAssignment'];
+  const tablenames = ["ClubMember", "EmailLog", "FamilyMember", "FamilyMemberLocation", "Location", "LocationPhone",
+    "Payments", "Personnel", "PersonnelAssignment", "PlayerAssignment", "SecondaryFamilyMember", "TeamFormation"];
   let tables = [];
   tablenames.forEach(t => {
     tables.push(<Table name={t} />);
@@ -193,12 +193,12 @@ const DataTable = ({ data }) => {
   const headers = Object.keys(data[0]);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse border border-gray-300">
+    <div className="table-container">
+      <table className="data-table">
         <thead>
-          <tr className="bg-gray-200">
+          <tr>
             {headers.map((header) => (
-              <th key={header} className="border border-gray-300 px-4 py-2">
+              <th key={header} className="table-header">
                 {header.replace(/_/g, " ").toUpperCase()}
               </th>
             ))}
@@ -206,9 +206,9 @@ const DataTable = ({ data }) => {
         </thead>
         <tbody>
           {data.map((row, rowIndex) => (
-            <tr key={rowIndex} className="hover:bg-gray-100">
+            <tr key={rowIndex} className="table-row">
               {headers.map((header) => (
-                <td key={header} className="border border-gray-300 px-4 py-2">
+                <td key={header} className="table-cell">
                   {row[header]}
                 </td>
               ))}

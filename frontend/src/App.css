@@ -31,3 +31,30 @@ h1 {
 .tableDivider {
   padding: 0 10% 0 10%;
 }
+
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ccc;
+}
+
+.table-header {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.table-row:hover {
+  background-color: #f9f9f9;
+}
+
+.table-cell {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
