@@ -72,4 +72,4 @@ cd comp353-main-project
 
 ## 👨‍👩‍👦 Contributors
 - **Pacifique Uwamukiza** – Schema, logic, constraints, SQL queries
-- **Seuni** – GUI interface (front-end integration)
+- **Jeremy Tang** – GUI interface (front-end integration)
